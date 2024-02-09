@@ -30,10 +30,13 @@ GraphWindow::GraphWindow()
     m_SketchLinesOriginal(nullptr),
     m_SketchLinesTransformed(nullptr),
     m_Points(nullptr),
+    m_Image(nullptr),
+    m_RenderImage(true),
     m_Homography(mat3x3_t(1.0f)),
-    m_HandleRefreshAll(nullptr),
-    m_RenderImage(true)
+    m_InverseHomography(mat3x3_t(1.0f)),
+    m_HandleRefreshAll(nullptr)
 {
+    /*
     memset(&m_Image, 0, sizeof(texture_t));
 
     if (!BMPManager::ReadBitMapData("vw_1300.bmp", m_Image))
@@ -45,6 +48,7 @@ GraphWindow::GraphWindow()
             MB_OK
         );
     }
+    */
 }
 
 
@@ -138,6 +142,12 @@ void GraphWindow::InitialiseSketchLinesTransformed(std::vector<line2_t>* sketch_
 void GraphWindow::InitialisePoints(std::vector<vect2_t>* points)
 {
     m_Points = points;
+}
+
+
+void GraphWindow::InitialiseImage(texture_t* image)
+{
+    m_Image = image;
 }
 
 
@@ -996,7 +1006,7 @@ void GraphWindow::DrawTexturedTriangle(
 
                 bmp32_t pixel = { 0 };
 
-                pixel.colour = m_Image.GetSample(u, v, 1, 1);
+                pixel.colour = m_Image->GetSample(u, v, 1, 1);
 
                 m_Canvas->DrawPoint(x, y, pixel.colour);
 			}

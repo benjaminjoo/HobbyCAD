@@ -48,6 +48,8 @@ public:
 
     void InitialisePoints(std::vector<vect2_t>* points);
 
+    void InitialiseImage(texture_t* image);
+
     void InitialiseRefreshHandler(std::function<void()> h_refresh);
 
     void CreateSketch();
@@ -158,6 +160,10 @@ private:
     std::vector<line2_t>*           m_SketchLinesTransformed;
     std::vector<vect2_t>*           m_Points;
 
+    texture_t*                      m_Image;
+
+    bool                            m_RenderImage;
+
     mat3x3_t                        m_Homography;
     mat3x3_t                        m_InverseHomography;
 
@@ -176,9 +182,5 @@ private:
     vect2_t                         m_B;
     vect2_t                         m_C;
     vect2_t                         m_D;
-
-    bool                            m_RenderImage;
-
-    texture_t                       m_Image;
 
 };

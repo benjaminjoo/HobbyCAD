@@ -77,4 +77,6 @@ private:
     std::vector<line2_t>                        m_SketchLinesTransformed;
     std::vector<vect2_t>                        m_Points;
 
+    texture_t                                   m_Image;
+
 };

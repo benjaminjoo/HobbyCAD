@@ -10,7 +10,17 @@ Application::Application(HINSTANCE hInstance)
     m_WindowFont(NULL),
     m_hMainWnd(NULL)
 {
+    memset(&m_Image, 0, sizeof(texture_t));
 
+    if (!BMPManager::ReadBitMapData("vw_1300.bmp", m_Image))
+    {
+        MessageBox(
+            m_hMainWnd,
+            "Could not open BMP file.",
+            "Bitmap error",
+            MB_OK
+        );
+    }
 }
 
 
@@ -110,6 +120,7 @@ bool Application::Initialise()
         window.second->InitialiseSketchLinesOriginal(&m_SketchLinesOriginal);
         window.second->InitialiseSketchLinesTransformed(&m_SketchLinesTransformed);
         window.second->InitialisePoints(&m_Points);
+        window.second->InitialiseImage(&m_Image);
 
         window.second->InitialiseRefreshHandler(
             std::bind(&Application::RefreshAll, this)
