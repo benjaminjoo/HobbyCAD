@@ -199,6 +199,8 @@ bool Application::Initialise()
             return false;
         }
 
+        window.second->InitialiseFrameLinesOriginal(&m_FrameLinesOriginal);
+        window.second->InitialiseFrameLinesTransformed(&m_FrameLinesTransformed);
         window.second->InitialiseReferenceLines(&m_ReferenceLines);
         window.second->InitialiseGridLines(&m_GridLines);
         window.second->InitialiseSketchLinesOriginal(&m_SketchLinesOriginal);

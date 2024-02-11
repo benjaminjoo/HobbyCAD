@@ -38,6 +38,10 @@ public:
 
 	void SetBackgroundColour(uint32_t c);
 
+    void InitialiseFrameLinesOriginal(std::vector<line2_t>* frame_lines);
+
+    void InitialiseFrameLinesTransformed(std::vector<line2_t>* frame_lines);
+
     void InitialiseReferenceLines(std::vector<line2_t>* ref_lines);
 
     void InitialiseGridLines(std::vector<line2_t>* grid_lines);
@@ -53,6 +57,8 @@ public:
     void InitialiseRefreshHandler(std::function<void()> h_refresh);
 
     void CreateSketch();
+
+    void AddReference();
 
     void UpdateView();
 
@@ -71,8 +77,6 @@ private:
     void DrawOrigin();
 
     void DrawSketch();
-
-    void DrawImage();
 
     void DrawContextSpecificStuff();
 
@@ -156,6 +160,8 @@ private:
     int                             m_CanvasW;
     int                             m_CanvasH;
 
+    std::vector<line2_t>*           m_FrameLinesOriginal;
+    std::vector<line2_t>*           m_FrameLinesTransformed;
     std::vector<line2_t>*           m_ReferenceLines;
     std::vector<line2_t>*           m_GridLines;
     std::vector<line2_t>*           m_SketchLinesOriginal;
@@ -184,5 +190,10 @@ private:
     vect2_t                         m_B;
     vect2_t                         m_C;
     vect2_t                         m_D;
+
+    vect2_t                         m_RA;
+    vect2_t                         m_RB;
+    vect2_t                         m_RC;
+    vect2_t                         m_RD;
 
 };

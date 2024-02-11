@@ -73,6 +73,8 @@ private:
 
     std::map<std::string, HWND>                 m_Buttons;
 
+    std::vector<line2_t>                        m_FrameLinesOriginal;
+    std::vector<line2_t>                        m_FrameLinesTransformed;
     std::vector<line2_t>                        m_ReferenceLines;
     std::vector<line2_t>                        m_GridLines;
     std::vector<line2_t>                        m_SketchLinesOriginal;

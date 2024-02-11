@@ -25,6 +25,8 @@ GraphWindow::GraphWindow()
     m_CanvasY(0),
     m_CanvasW(0),
     m_CanvasH(0),
+    m_FrameLinesOriginal(nullptr),
+    m_FrameLinesTransformed(nullptr),
     m_ReferenceLines(nullptr),
     m_GridLines(nullptr),
     m_SketchLinesOriginal(nullptr),
@@ -100,6 +102,18 @@ BOOL GraphWindow::Create(
 void GraphWindow::SetBackgroundColour(uint32_t c)
 {
     m_BackgroundColour = c;
+}
+
+
+void GraphWindow::InitialiseFrameLinesOriginal(std::vector<line2_t>* frame_lines)
+{
+    m_FrameLinesOriginal = frame_lines;
+}
+
+
+void GraphWindow::InitialiseFrameLinesTransformed(std::vector<line2_t>* frame_lines)
+{
+    m_FrameLinesTransformed = frame_lines;
 }
 
 
@@ -208,7 +222,7 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         break;
         case WM_CREATE:
         {
-            Render();
+            //Render();
         }
         break;
         case WM_PAINT:
@@ -308,18 +322,21 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 m_TempMoveStartPoint = ScreenToWorld(m_MoveOrigin);
                 m_TempMoveLine.S = m_TempMoveStartPoint;
 
-                for (auto& ref_line : *m_ReferenceLines)
+                if (m_ReferenceLines)
                 {
-                    float dist_squared_s = DistanceSquared(mouse_world, ref_line.S);
-                    float dist_squared_e = DistanceSquared(mouse_world, ref_line.E);
+                    for (auto& ref_line : *m_ReferenceLines)
+                    {
+                        int dist_squared_s = PixelDistanceSquared(m_MousePosition, WorldToScreen(ref_line.S));
+                        int dist_squared_e = PixelDistanceSquared(m_MousePosition, WorldToScreen(ref_line.E));
 
-                    if (dist_squared_s < SNAP_RANGE)
-                    {
-                        m_VerticesBeingMoved.push_back(&(ref_line.S));
-                    }
-                    if (dist_squared_e < SNAP_RANGE)
-                    {
-                        m_VerticesBeingMoved.push_back(&(ref_line.E));
+                        if (dist_squared_s < SNAP_RANGE)
+                        {
+                            m_VerticesBeingMoved.push_back(&(ref_line.S));
+                        }
+                        if (dist_squared_e < SNAP_RANGE)
+                        {
+                            m_VerticesBeingMoved.push_back(&(ref_line.E));
+                        }
                     }
                 }
 
@@ -439,28 +456,31 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             SetMousePosition(x, y);
 
-            for (auto& ref_line : *m_ReferenceLines)
+            if (m_ReferenceLines)
             {
-                int dist_squared_s = PixelDistanceSquared(m_MousePosition, WorldToScreen(ref_line.S));
-                int dist_squared_e = PixelDistanceSquared(m_MousePosition, WorldToScreen(ref_line.E));
+                for (auto& ref_line : *m_ReferenceLines)
+                {
+                    int dist_squared_s = PixelDistanceSquared(m_MousePosition, WorldToScreen(ref_line.S));
+                    int dist_squared_e = PixelDistanceSquared(m_MousePosition, WorldToScreen(ref_line.E));
 
-                if (dist_squared_s < SNAP_RANGE)
-                {
-                    m_HotspotPosition = ref_line.S;
-                    m_HotspotFound = true;
-                    Render();
-                    break;
-                }
-                else if (dist_squared_e < SNAP_RANGE)
-                {
-                    m_HotspotPosition = ref_line.E;
-                    m_HotspotFound = true;
-                    Render();
-                    break;
-                }
-                else
-                {
-                    m_HotspotFound = false;
+                    if (dist_squared_s < SNAP_RANGE)
+                    {
+                        m_HotspotPosition = ref_line.S;
+                        m_HotspotFound = true;
+                        Render();
+                        break;
+                    }
+                    else if (dist_squared_e < SNAP_RANGE)
+                    {
+                        m_HotspotPosition = ref_line.E;
+                        m_HotspotFound = true;
+                        Render();
+                        break;
+                    }
+                    else
+                    {
+                        m_HotspotFound = false;
+                    }
                 }
             }
 
@@ -528,21 +548,57 @@ void GraphWindow::DrawSketch()
         auto C = WorldToScreen(m_C);
         auto D = WorldToScreen(m_D);
 
-        if (m_ReferenceLines)
+        if (m_FrameLinesTransformed && (m_FrameLinesTransformed->size() >= 4))
         {
-            A = WorldToScreen(m_ReferenceLines->at(0).S);
-            B = WorldToScreen(m_ReferenceLines->at(1).S);
-            C = WorldToScreen(m_ReferenceLines->at(2).S);
-            D = WorldToScreen(m_ReferenceLines->at(3).S);
+            try
+            {
+                A = WorldToScreen(m_FrameLinesTransformed->at(0).S);
+                B = WorldToScreen(m_FrameLinesTransformed->at(1).S);
+                C = WorldToScreen(m_FrameLinesTransformed->at(2).S);
+                D = WorldToScreen(m_FrameLinesTransformed->at(3).S);
+            }
+            catch (const std::exception& e)
+            {
+                MessageBox(
+                    m_hWnd,
+                    e.what(),
+                    "DrawSketch()",
+                    MB_OK
+                );
+            }
 
             A.u = 0.0f;     A.v = 0.0f;
             B.u = 1.0f;     B.v = 0.0f;
             C.u = 1.0f;     C.v = 1.0f;
             D.u = 0.0f;     D.v = 1.0f;
 
-            DrawTexturedTriangle(A, B, C);
+            if (m_Image)
+            {
+                DrawTexturedTriangle(A, B, C);
+                DrawTexturedTriangle(C, D, A);
+            }
+        }
+    }
 
-            DrawTexturedTriangle(C, D, A);
+    /*
+    if (m_FrameLinesOriginal)
+    {
+        for (const auto& fl : *m_FrameLinesOriginal)
+        {
+            auto s = WorldToScreen(fl.S);
+            auto e = WorldToScreen(fl.E);
+            m_Canvas->DrawLine(s, e, fl.colour, 4);
+        }
+    }
+    */
+
+    if (m_FrameLinesTransformed)
+    {
+        for (const auto& fl : *m_FrameLinesTransformed)
+        {
+            auto s = WorldToScreen(fl.S);
+            auto e = WorldToScreen(fl.E);
+            m_Canvas->DrawLine(s, e, fl.colour, 4);
         }
     }
 
@@ -566,6 +622,7 @@ void GraphWindow::DrawSketch()
         }
     }
 
+    /*
     if (m_SketchLinesOriginal)
     {
         for (const auto& sl : *m_SketchLinesOriginal)
@@ -575,6 +632,7 @@ void GraphWindow::DrawSketch()
             m_Canvas->DrawLine(s, e, sl.colour, 1);
         }
     }
+    */
 
     if (m_SketchLinesTransformed)
     {
@@ -593,35 +651,6 @@ void GraphWindow::DrawSketch()
             auto p = WorldToScreen(P);
             m_Canvas->DrawPoint(p.x, p.y, 0x00FF0000);
         }
-    }
-}
-
-
-void GraphWindow::DrawImage()
-{
-    if (m_RenderImage)
-    {
-        auto A = WorldToScreen(m_A);
-        auto B = WorldToScreen(m_B);
-        auto C = WorldToScreen(m_C);
-        auto D = WorldToScreen(m_D);
-
-        if (m_ReferenceLines)
-        {
-            A = WorldToScreen(m_ReferenceLines->at(0).S);
-            B = WorldToScreen(m_ReferenceLines->at(1).S);
-            C = WorldToScreen(m_ReferenceLines->at(2).S);
-            D = WorldToScreen(m_ReferenceLines->at(3).S);
-        }
-
-        A.u = 0.0f;     A.v = 0.0f;
-        B.u = 1.0f;     B.v = 0.0f;
-        C.u = 1.0f;     C.v = 1.0f;
-        D.u = 0.0f;     D.v = 1.0f;
-
-        DrawTexturedTriangle(A, B, C);
-
-        DrawTexturedTriangle(C, D, A);
     }
 }
 
@@ -783,20 +812,42 @@ vect2_t GraphWindow::ScreenToWorld(const screen_coord_t& point)
 
 void GraphWindow::CreateSketch()
 {
-    //m_A = { -300.0f,  200.0f };
-    //m_B = {  300.0f,  200.0f };
-    //m_C = {  300.0f, -200.0f };
-    //m_D = { -300.0f, -200.0f };
-
     m_A = { -250.0f,  250.0f };
     m_B = {  250.0f,  250.0f };
     m_C = {  250.0f, -250.0f };
     m_D = { -250.0f, -250.0f };
 
-    m_ReferenceLines->push_back({ m_A, m_B, 0x00FF7F00 });
-    m_ReferenceLines->push_back({ m_B, m_C, 0x00FF7F00 });
-    m_ReferenceLines->push_back({ m_C, m_D, 0x00FF7F00 });
-    m_ReferenceLines->push_back({ m_D, m_A, 0x00FF7F00 });
+    if (m_FrameLinesOriginal)
+    {
+        m_FrameLinesOriginal->push_back({ m_A, m_B, 0x00FF0000 });
+        m_FrameLinesOriginal->push_back({ m_B, m_C, 0x00FF0000 });
+        m_FrameLinesOriginal->push_back({ m_C, m_D, 0x00FF0000 });
+        m_FrameLinesOriginal->push_back({ m_D, m_A, 0x00FF0000 });
+
+        m_FrameLinesTransformed->push_back({ m_A, m_B, 0x00FF0000 });
+        m_FrameLinesTransformed->push_back({ m_B, m_C, 0x00FF0000 });
+        m_FrameLinesTransformed->push_back({ m_C, m_D, 0x00FF0000 });
+        m_FrameLinesTransformed->push_back({ m_D, m_A, 0x00FF0000 });
+    }
+
+    AddReference();
+}
+
+
+void GraphWindow::AddReference()
+{
+    m_RA = { -150,  150.0f };
+    m_RB = {  150,  150.0f };
+    m_RC = {  150, -150.0f };
+    m_RD = { -150, -150.0f };
+
+    if (m_ReferenceLines)
+    {
+        m_ReferenceLines->push_back({ m_RA, m_RB, 0x00FF7F00 });
+        m_ReferenceLines->push_back({ m_RB, m_RC, 0x00FF7F00 });
+        m_ReferenceLines->push_back({ m_RC, m_RD, 0x00FF7F00 });
+        m_ReferenceLines->push_back({ m_RD, m_RA, 0x00FF7F00 });
+    }
 }
 
 
@@ -811,41 +862,73 @@ void GraphWindow::UpdateSketch()
 {
     UpdateHomography();
 
-    m_SketchLinesTransformed->clear();
-    for (auto& sl : *m_SketchLinesOriginal)
+    if (m_SketchLinesTransformed)
     {
-        line2_t temp = { m_Homography * sl.S, m_Homography * sl.E, 0x007F7FFF };
+        m_SketchLinesTransformed->clear();
+    }
+    if (m_SketchLinesOriginal)
+    {
+        for (auto& sl : *m_SketchLinesOriginal)
+        {
+            line2_t temp = { m_Homography * sl.S, m_Homography * sl.E, 0x007F7FFF };
 
-        m_SketchLinesTransformed->push_back(temp);
+            m_SketchLinesTransformed->push_back(temp);
+        }
+    }
+
+    if (m_FrameLinesTransformed)
+    {
+        m_FrameLinesTransformed->clear();
+    }
+    if (m_FrameLinesOriginal && m_FrameLinesOriginal->size())
+    {
+        for (auto& fl : *m_FrameLinesOriginal)
+        {
+            line2_t temp = { m_Homography * fl.S, m_Homography * fl.E, 0x00FF0000 };
+
+            m_FrameLinesTransformed->push_back(temp);
+        }
     }
 
     m_GridLines->clear();
     m_Points->clear();
 
-    if (m_ReferenceLines && m_ReferenceLines->size())
+    if (m_FrameLinesTransformed && m_FrameLinesTransformed->size())
     {
-        line2_t a = m_ReferenceLines->at(0);
-        line2_t b = m_ReferenceLines->at(1);
-        line2_t c = m_ReferenceLines->at(2);
-        line2_t d = m_ReferenceLines->at(3);
-
-        vect2_t A_ = a.S;
-        vect2_t B_ = b.S;
-        vect2_t C_ = c.S;
-        vect2_t D_ = d.S;
-
-        vect2_t dummy_x;
-        vect2_t dummy_y;
-        if (Intersect(d, b, dummy_x) && Intersect(a, c, dummy_y))
+        try
         {
-            vect2_t U = AddIntersection(d, b);
-            vect2_t V = AddIntersection(a, c);
-    
-            DivideQuadrangle(U, V, a.S, b.S, c.S, d.S, 3);
+            line2_t a = m_FrameLinesTransformed->at(0);
+            line2_t b = m_FrameLinesTransformed->at(1);
+            line2_t c = m_FrameLinesTransformed->at(2);
+            line2_t d = m_FrameLinesTransformed->at(3);
+
+            vect2_t A_ = a.S;
+            vect2_t B_ = b.S;
+            vect2_t C_ = c.S;
+            vect2_t D_ = d.S;
+
+            vect2_t dummy_x;
+            vect2_t dummy_y;
+            if (Intersect(d, b, dummy_x) && Intersect(a, c, dummy_y))
+            {
+                vect2_t U = AddIntersection(d, b);
+                vect2_t V = AddIntersection(a, c);
+        
+                DivideQuadrangle(U, V, a.S, b.S, c.S, d.S, 3);
+            }
+            else
+            {
+                DivideRectangle(a.S, b.S, c.S, d.S, 3);
+            }
         }
-        else
+        catch (const std::exception& e)
         {
-            DivideRectangle(a.S, b.S, c.S, d.S, 3);
+            MessageBox(
+                m_hWnd,
+                e.what(),
+                "UpdateSketch()",
+                MB_OK
+            );
         }
     }
 }
@@ -943,29 +1026,41 @@ void GraphWindow::UpdateHomography()
 {
     if (m_ReferenceLines && m_ReferenceLines->size())
     {
-        line2_t a = m_ReferenceLines->at(0);
-        line2_t b = m_ReferenceLines->at(1);
-        line2_t c = m_ReferenceLines->at(2);
-        line2_t d = m_ReferenceLines->at(3);
-
-        vect2_t A_ = a.S;
-        vect2_t B_ = b.S;
-        vect2_t C_ = c.S;
-        vect2_t D_ = d.S;
-
-        std::vector<vect2_t> original_points = { m_A, m_B, m_C, m_D };
-        std::vector<vect2_t> transformed_points = { A_, B_, C_, D_ };
-
-        mat3x3_t temp(1.0f);
-        if (CalculateHomography(original_points, transformed_points, temp))
+        try
         {
-            m_Homography = temp;
+            line2_t a = m_ReferenceLines->at(0);
+            line2_t b = m_ReferenceLines->at(1);
+            line2_t c = m_ReferenceLines->at(2);
+            line2_t d = m_ReferenceLines->at(3);
 
-            mat3x3_t temp_inverse(1.0f);
-            if (FindInverseMatrix(m_Homography.elements, temp_inverse.elements, 3, 3))
+            vect2_t A_ = a.S;
+            vect2_t B_ = b.S;
+            vect2_t C_ = c.S;
+            vect2_t D_ = d.S;
+
+            std::vector<vect2_t> original_points = { m_RA, m_RB, m_RC, m_RD };
+            std::vector<vect2_t> transformed_points = { A_, B_, C_, D_ };
+
+            mat3x3_t temp(1.0f);
+            if (CalculateHomography(original_points, transformed_points, temp))
             {
-                m_InverseHomography = temp_inverse;
+                m_Homography = temp;
+
+                mat3x3_t temp_inverse(1.0f);
+                if (FindInverseMatrix(m_Homography.elements, temp_inverse.elements, 3, 3))
+                {
+                    m_InverseHomography = temp_inverse;
+                }
             }
+        }
+        catch (const std::exception& e)
+        {
+            MessageBox(
+                m_hWnd,
+                e.what(),
+                "UpdateHomography()",
+                MB_OK
+            );
         }
     }
 }
@@ -973,26 +1068,33 @@ void GraphWindow::UpdateHomography()
 
 void GraphWindow::UndoTransformation()
 {
-    //m_A = { -300.0f,  200.0f };
-    //m_B = {  300.0f,  200.0f };
-    //m_C = {  300.0f, -200.0f };
-    //m_D = { -300.0f, -200.0f };
-
     if (m_ReferenceLines && m_ReferenceLines->size())
     {
-        m_A = { -250.0f,  250.0f };
-        m_B = {  250.0f,  250.0f };
-        m_C = {  250.0f, -250.0f };
-        m_D = { -250.0f, -250.0f };
+        m_RA = { -150.0f,  150.0f };
+        m_RB = {  150.0f,  150.0f };
+        m_RC = {  150.0f, -150.0f };
+        m_RD = { -150.0f, -150.0f };
 
-        m_ReferenceLines->at(0).S = m_A;
-        m_ReferenceLines->at(0).E = m_B;
-        m_ReferenceLines->at(1).S = m_B;
-        m_ReferenceLines->at(1).E = m_C;
-        m_ReferenceLines->at(2).S = m_C;
-        m_ReferenceLines->at(2).E = m_D;
-        m_ReferenceLines->at(3).S = m_D;
-        m_ReferenceLines->at(3).E = m_A;
+        try
+        {
+            m_ReferenceLines->at(0).S = m_RA;
+            m_ReferenceLines->at(0).E = m_RB;
+            m_ReferenceLines->at(1).S = m_RB;
+            m_ReferenceLines->at(1).E = m_RC;
+            m_ReferenceLines->at(2).S = m_RC;
+            m_ReferenceLines->at(2).E = m_RD;
+            m_ReferenceLines->at(3).S = m_RD;
+            m_ReferenceLines->at(3).E = m_RA;
+        }
+        catch (const std::exception& e)
+        {
+            MessageBox(
+                m_hWnd,
+                e.what(),
+                "UndoTransformation()",
+                MB_OK
+            );
+        }
 
         UpdateSketch();
 
@@ -1041,9 +1143,6 @@ void GraphWindow::DrawTexturedTriangle(
 			{
                 auto p_world = ScreenToWorld({ x, y });
                 auto p_original = m_InverseHomography * p_world;
-
-                //float u = (p_original.x + 300.0f) / 600.0f;
-                //float v = (p_original.y + 200.0f) / 400.0f;
 
                 float u = (p_original.x + 250.0f) / 500.0f;
                 float v = (p_original.y + 250.0f) / 500.0f;
