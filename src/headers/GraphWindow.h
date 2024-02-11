@@ -72,6 +72,8 @@ private:
 
     void DrawSketch();
 
+    void DrawImage();
+
     void DrawContextSpecificStuff();
 
     void DrawCrosshair();

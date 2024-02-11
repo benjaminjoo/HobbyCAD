@@ -7,7 +7,7 @@ GraphWindow::GraphWindow()
 	m_hParentWnd(NULL),
 	m_Canvas(nullptr),
     m_Printer(nullptr),
-    m_ViewScale(2.0f),
+    m_ViewScale(1.0f),
     m_LeftClickInProgress(false),
     m_MouseDrag(false),
     m_MouseMove(false),
@@ -36,19 +36,7 @@ GraphWindow::GraphWindow()
     m_InverseHomography(mat3x3_t(1.0f)),
     m_HandleRefreshAll(nullptr)
 {
-    /*
-    memset(&m_Image, 0, sizeof(texture_t));
 
-    if (!BMPManager::ReadBitMapData("vw_1300.bmp", m_Image))
-    {
-        MessageBox(
-            m_hWnd,
-            "Could not open BMP file.",
-            "Bitmap error",
-            MB_OK
-        );
-    }
-    */
 }
 
 
@@ -460,12 +448,14 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 {
                     m_HotspotPosition = ref_line.S;
                     m_HotspotFound = true;
+                    Render();
                     break;
                 }
                 else if (dist_squared_e < SNAP_RANGE)
                 {
                     m_HotspotPosition = ref_line.E;
                     m_HotspotFound = true;
+                    Render();
                     break;
                 }
                 else
@@ -494,15 +484,20 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
             if (m_MouseDrag)
             {
                 Drag();
+                Render();
             }
             if (m_MouseMove)
             {
                 Move();
+                Render();
             }
 
             UpdateSketch();
 
-            Render();
+            if (g_LeftClicksIn == 1)
+            {
+                Render();
+            }
         }
         break;
     }
@@ -539,16 +534,16 @@ void GraphWindow::DrawSketch()
             B = WorldToScreen(m_ReferenceLines->at(1).S);
             C = WorldToScreen(m_ReferenceLines->at(2).S);
             D = WorldToScreen(m_ReferenceLines->at(3).S);
+
+            A.u = 0.0f;     A.v = 0.0f;
+            B.u = 1.0f;     B.v = 0.0f;
+            C.u = 1.0f;     C.v = 1.0f;
+            D.u = 0.0f;     D.v = 1.0f;
+
+            DrawTexturedTriangle(A, B, C);
+
+            DrawTexturedTriangle(C, D, A);
         }
-
-        A.u = 0.0f;     A.v = 0.0f;
-        B.u = 1.0f;     B.v = 0.0f;
-        C.u = 1.0f;     C.v = 1.0f;
-        D.u = 0.0f;     D.v = 1.0f;
-
-        DrawTexturedTriangle(A, B, C);
-
-        DrawTexturedTriangle(C, D, A);
     }
 
     if (m_ReferenceLines)
@@ -571,7 +566,6 @@ void GraphWindow::DrawSketch()
         }
     }
 
-    /*
     if (m_SketchLinesOriginal)
     {
         for (const auto& sl : *m_SketchLinesOriginal)
@@ -581,7 +575,6 @@ void GraphWindow::DrawSketch()
             m_Canvas->DrawLine(s, e, sl.colour, 1);
         }
     }
-    */
 
     if (m_SketchLinesTransformed)
     {
@@ -598,8 +591,37 @@ void GraphWindow::DrawSketch()
         for (const auto& P : *m_Points)
         {
             auto p = WorldToScreen(P);
-            m_Canvas->DrawPoint(p.x, p.y, 0x00FFFFFF);
+            m_Canvas->DrawPoint(p.x, p.y, 0x00FF0000);
         }
+    }
+}
+
+
+void GraphWindow::DrawImage()
+{
+    if (m_RenderImage)
+    {
+        auto A = WorldToScreen(m_A);
+        auto B = WorldToScreen(m_B);
+        auto C = WorldToScreen(m_C);
+        auto D = WorldToScreen(m_D);
+
+        if (m_ReferenceLines)
+        {
+            A = WorldToScreen(m_ReferenceLines->at(0).S);
+            B = WorldToScreen(m_ReferenceLines->at(1).S);
+            C = WorldToScreen(m_ReferenceLines->at(2).S);
+            D = WorldToScreen(m_ReferenceLines->at(3).S);
+        }
+
+        A.u = 0.0f;     A.v = 0.0f;
+        B.u = 1.0f;     B.v = 0.0f;
+        C.u = 1.0f;     C.v = 1.0f;
+        D.u = 0.0f;     D.v = 1.0f;
+
+        DrawTexturedTriangle(A, B, C);
+
+        DrawTexturedTriangle(C, D, A);
     }
 }
 
@@ -761,10 +783,15 @@ vect2_t GraphWindow::ScreenToWorld(const screen_coord_t& point)
 
 void GraphWindow::CreateSketch()
 {
-    m_A = { -300.0f,  200.0f };
-    m_B = {  300.0f,  200.0f };
-    m_C = {  300.0f, -200.0f };
-    m_D = { -300.0f, -200.0f };
+    //m_A = { -300.0f,  200.0f };
+    //m_B = {  300.0f,  200.0f };
+    //m_C = {  300.0f, -200.0f };
+    //m_D = { -300.0f, -200.0f };
+
+    m_A = { -250.0f,  250.0f };
+    m_B = {  250.0f,  250.0f };
+    m_C = {  250.0f, -250.0f };
+    m_D = { -250.0f, -250.0f };
 
     m_ReferenceLines->push_back({ m_A, m_B, 0x00FF7F00 });
     m_ReferenceLines->push_back({ m_B, m_C, 0x00FF7F00 });
@@ -795,28 +822,31 @@ void GraphWindow::UpdateSketch()
     m_GridLines->clear();
     m_Points->clear();
 
-    line2_t a = m_ReferenceLines->at(0);
-    line2_t b = m_ReferenceLines->at(1);
-    line2_t c = m_ReferenceLines->at(2);
-    line2_t d = m_ReferenceLines->at(3);
-
-    vect2_t A_ = a.S;
-    vect2_t B_ = b.S;
-    vect2_t C_ = c.S;
-    vect2_t D_ = d.S;
-
-    vect2_t dummy_x;
-    vect2_t dummy_y;
-    if (Intersect(d, b, dummy_x) && Intersect(a, c, dummy_y))
+    if (m_ReferenceLines && m_ReferenceLines->size())
     {
-        vect2_t U = AddIntersection(d, b);
-        vect2_t V = AddIntersection(a, c);
+        line2_t a = m_ReferenceLines->at(0);
+        line2_t b = m_ReferenceLines->at(1);
+        line2_t c = m_ReferenceLines->at(2);
+        line2_t d = m_ReferenceLines->at(3);
 
-        DivideQuadrangle(U, V, a.S, b.S, c.S, d.S, 3);
-    }
-    else
-    {
-        DivideRectangle(a.S, b.S, c.S, d.S, 3);
+        vect2_t A_ = a.S;
+        vect2_t B_ = b.S;
+        vect2_t C_ = c.S;
+        vect2_t D_ = d.S;
+
+        vect2_t dummy_x;
+        vect2_t dummy_y;
+        if (Intersect(d, b, dummy_x) && Intersect(a, c, dummy_y))
+        {
+            vect2_t U = AddIntersection(d, b);
+            vect2_t V = AddIntersection(a, c);
+    
+            DivideQuadrangle(U, V, a.S, b.S, c.S, d.S, 3);
+        }
+        else
+        {
+            DivideRectangle(a.S, b.S, c.S, d.S, 3);
+        }
     }
 }
 
@@ -911,28 +941,31 @@ vect2_t GraphWindow::AddHalfwayPoint(const vect2_t& A, const vect2_t& B)
 
 void GraphWindow::UpdateHomography()
 {
-    line2_t a = m_ReferenceLines->at(0);
-    line2_t b = m_ReferenceLines->at(1);
-    line2_t c = m_ReferenceLines->at(2);
-    line2_t d = m_ReferenceLines->at(3);
-
-    vect2_t A_ = a.S;
-    vect2_t B_ = b.S;
-    vect2_t C_ = c.S;
-    vect2_t D_ = d.S;
-
-    std::vector<vect2_t> original_points = { m_A, m_B, m_C, m_D };
-    std::vector<vect2_t> transformed_points = { A_, B_, C_, D_ };
-
-    mat3x3_t temp(1.0f);
-    if (CalculateHomography(original_points, transformed_points, temp))
+    if (m_ReferenceLines && m_ReferenceLines->size())
     {
-        m_Homography = temp;
+        line2_t a = m_ReferenceLines->at(0);
+        line2_t b = m_ReferenceLines->at(1);
+        line2_t c = m_ReferenceLines->at(2);
+        line2_t d = m_ReferenceLines->at(3);
 
-        mat3x3_t temp_inverse(1.0f);
-        if (FindInverseMatrix(m_Homography.elements, temp_inverse.elements, 3, 3))
+        vect2_t A_ = a.S;
+        vect2_t B_ = b.S;
+        vect2_t C_ = c.S;
+        vect2_t D_ = d.S;
+
+        std::vector<vect2_t> original_points = { m_A, m_B, m_C, m_D };
+        std::vector<vect2_t> transformed_points = { A_, B_, C_, D_ };
+
+        mat3x3_t temp(1.0f);
+        if (CalculateHomography(original_points, transformed_points, temp))
         {
-            m_InverseHomography = temp_inverse;
+            m_Homography = temp;
+
+            mat3x3_t temp_inverse(1.0f);
+            if (FindInverseMatrix(m_Homography.elements, temp_inverse.elements, 3, 3))
+            {
+                m_InverseHomography = temp_inverse;
+            }
         }
     }
 }
@@ -940,24 +973,32 @@ void GraphWindow::UpdateHomography()
 
 void GraphWindow::UndoTransformation()
 {
-    m_A = { -300.0f,  200.0f };
-    m_B = {  300.0f,  200.0f };
-    m_C = {  300.0f, -200.0f };
-    m_D = { -300.0f, -200.0f };
+    //m_A = { -300.0f,  200.0f };
+    //m_B = {  300.0f,  200.0f };
+    //m_C = {  300.0f, -200.0f };
+    //m_D = { -300.0f, -200.0f };
 
-    m_ReferenceLines->at(0).S = m_A;
-    m_ReferenceLines->at(0).E = m_B;
-    m_ReferenceLines->at(1).S = m_B;
-    m_ReferenceLines->at(1).E = m_C;
-    m_ReferenceLines->at(2).S = m_C;
-    m_ReferenceLines->at(2).E = m_D;
-    m_ReferenceLines->at(3).S = m_D;
-    m_ReferenceLines->at(3).E = m_A;
+    if (m_ReferenceLines && m_ReferenceLines->size())
+    {
+        m_A = { -250.0f,  250.0f };
+        m_B = {  250.0f,  250.0f };
+        m_C = {  250.0f, -250.0f };
+        m_D = { -250.0f, -250.0f };
 
-    UpdateSketch();
+        m_ReferenceLines->at(0).S = m_A;
+        m_ReferenceLines->at(0).E = m_B;
+        m_ReferenceLines->at(1).S = m_B;
+        m_ReferenceLines->at(1).E = m_C;
+        m_ReferenceLines->at(2).S = m_C;
+        m_ReferenceLines->at(2).E = m_D;
+        m_ReferenceLines->at(3).S = m_D;
+        m_ReferenceLines->at(3).E = m_A;
 
-    m_Homography =          mat3x3_t(1.0f);
-    m_InverseHomography =   mat3x3_t(1.0f);
+        UpdateSketch();
+
+        m_Homography =          mat3x3_t(1.0f);
+        m_InverseHomography =   mat3x3_t(1.0f);
+    }
 }
 
 
@@ -1001,14 +1042,18 @@ void GraphWindow::DrawTexturedTriangle(
                 auto p_world = ScreenToWorld({ x, y });
                 auto p_original = m_InverseHomography * p_world;
 
-                float u = (p_original.x + 300.0f) / 600.0f;
-                float v = (p_original.y + 200.0f) / 400.0f;
+                //float u = (p_original.x + 300.0f) / 600.0f;
+                //float v = (p_original.y + 200.0f) / 400.0f;
+
+                float u = (p_original.x + 250.0f) / 500.0f;
+                float v = (p_original.y + 250.0f) / 500.0f;
 
                 bmp32_t pixel = { 0 };
 
                 pixel.colour = m_Image->GetSample(u, v, 1, 1);
 
-                m_Canvas->DrawPoint(x, y, pixel.colour);
+                m_Canvas->PutPixel(x, y, pixel.colour);
+                m_Canvas->PutPixel(x, y, pixel.colour);
 			}
 		}
 	}

@@ -195,6 +195,8 @@ void Canvas::DrawTexturedTriangle(
 
 void Canvas::DrawPoint(int x, int y, uint32_t pixel_colour)
 {
+    //PutPixel(x, y, pixel_colour);
+    //return;
 	for (int j = 0; j < NODE_SIZE; j++)
 	{
 		for (int i = 0; i < NODE_SIZE; i++)
@@ -203,9 +205,12 @@ void Canvas::DrawPoint(int x, int y, uint32_t pixel_colour)
 			{
                 int x_coord = x - NODE_SIZE / 2 + i;
                 int y_coord = y - NODE_SIZE / 2 + j;
+                PutPixel(x_coord, y_coord, pixel_colour);
+                /*
                 uint32_t canvas_colour = GetPixel(x_coord, y_coord);
                 uint32_t colour = Blend(canvas_colour, pixel_colour);
 				PutPixel(x_coord, y_coord, colour);
+                */
 			}
 		}
 	}

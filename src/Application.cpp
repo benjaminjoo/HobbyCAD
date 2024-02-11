@@ -12,7 +12,10 @@ Application::Application(HINSTANCE hInstance)
 {
     memset(&m_Image, 0, sizeof(texture_t));
 
-    if (!BMPManager::ReadBitMapData("vw_1300.bmp", m_Image))
+    //if (!BMPManager::ReadBitMapData("vw_1300.bmp", m_Image))
+    if (!BMPManager::ReadBitMapData("lakotelep_2500x2500.bmp", m_Image))
+    //if (!BMPManager::ReadBitMapData("szamuely_2500x2500.bmp", m_Image))
+    if (!BMPManager::ReadBitMapData("chess.bmp", m_Image))
     {
         MessageBox(
             m_hMainWnd,
@@ -21,6 +24,87 @@ Application::Application(HINSTANCE hInstance)
             MB_OK
         );
     }
+    /*
+    float* intensity_buffer = nullptr;
+    uint8_t* threshold_buffer = nullptr;
+
+    if (!Image::GetIntensityAndThresholdBuffer(
+            m_Image,
+            intensity_buffer,
+            threshold_buffer,
+            4,
+            true
+        )
+    )
+    {
+        MessageBox(
+            m_hMainWnd,
+            "Failed to get intensity and threshold values.",
+            "Bitmap error",
+            MB_OK
+        );
+    }
+
+    if (!Image::FindVerticesInsideSquares(
+        m_Image,
+        m_Points,
+        intensity_buffer,
+        threshold_buffer)
+    )
+    {
+        MessageBox(
+            m_hMainWnd,
+            "Failed to calculate pixel intensities.",
+            "Bitmap error",
+            MB_OK
+        );
+    }
+    */
+    /*
+    if (!Image::FindVerticesInsideCircles(
+        m_Image,
+        m_Points,
+        intensity_buffer,
+        threshold_buffer)
+    )
+    {
+        MessageBox(
+            m_hMainWnd,
+            "Failed to calculate pixel intensities.",
+            "Bitmap error",
+            MB_OK
+        );
+    }
+    */
+    /*
+    std::string vertices_msg = std::to_string(m_Points.size()) + " vertices found!";
+    MessageBox(
+        m_hMainWnd,
+        vertices_msg.c_str(),
+        "Corner detection",
+        MB_OK
+    );
+    */
+    /*
+    std::ofstream vertex_output("vertices.txt");
+    if (vertex_output.is_open())
+    {
+        for (const auto& p : m_Points)
+        {
+            vertex_output << std::to_string(p.x) << ", " << std::to_string(p.y) << "\n";
+        }
+
+        vertex_output.close();
+    }
+    */
+
+    /*
+    for (int i = 0; i < m_Image.w * m_Image.h; i++)
+    {
+        uint8_t s = threshold_buffer[i];
+        m_Image.buffer[i] = (s << 16) | (s << 8) | s;
+    }
+    */
 }
 
 

@@ -5,12 +5,14 @@
 
 
 #include <map>
+#include <fstream>
 
 
 #include <Windows.h>
 
 
 #include "GraphWindow.h"
+#include "ImageUtilities.h"
 #include "Globals.h"
 
 
