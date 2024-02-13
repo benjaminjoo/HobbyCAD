@@ -9,6 +9,7 @@
 
 
 #include <Windows.h>
+#include <commdlg.h>
 
 
 #include "GraphWindow.h"
@@ -16,10 +17,14 @@
 #include "Globals.h"
 
 
-#define ACTIVATE_SELECTION_TOOL      0x6000
-#define ACTIVATE_LINE_TOOL           0x6001
-#define ACTIVATE_POLYLINE_TOOL       0x6002
-#define ACTIVATE_POLYGON_TOOL       0x6003
+#define ACTIVATE_SELECTION_TOOL         0x6000
+#define ACTIVATE_LINE_TOOL              0x6001
+#define ACTIVATE_POLYLINE_TOOL          0x6002
+#define ACTIVATE_POLYGON_TOOL           0x6003
+#define ACTIVATE_FRAME_TOOL             0x6004
+
+#define OPEN_IMAGE_FILE                 0x6010
+#define SAVE_IMAGE_FILE                 0x6011
 
 
 using Window = std::shared_ptr<GraphWindow>;

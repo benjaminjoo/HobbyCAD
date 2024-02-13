@@ -262,6 +262,7 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 {
                     l.selected = false;
                 }
+                m_TempFramePoints.clear();
                 Render();
             }
             if (wParam == VK_SPACE)
@@ -397,6 +398,47 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     g_LeftClicksIn = 0;
                 }
             }
+            else if (g_ActiveTool == ToolBox::Frame)
+            {
+                if (m_TempFramePoints.size() == 0)
+                {
+                    m_ReferenceLines->clear();
+                }
+
+                if (m_TempFramePoints.size() < 4)
+                {
+                    m_TempStartPoint = ScreenToWorld(m_MousePosition);
+
+                    m_TempFramePoints.push_back(m_TempStartPoint);
+
+                    auto n = m_TempFramePoints.size();
+                    if (n > 1)
+                    {
+                        m_SketchLinesOriginal->push_back({ m_TempFramePoints.at(n - 2), m_TempFramePoints.at(n - 1), 0x00FF7F00 });
+                    }
+                }
+
+                if (m_TempFramePoints.size() == 4)
+                {
+                    m_OriginalFramePoints.clear();
+
+                    for (const auto& p : m_TempFramePoints)
+                    {
+                        m_OriginalFramePoints.push_back(p);
+                    }
+
+                    m_TempFramePoints.clear();
+
+                    m_RA = m_OriginalFramePoints.at(0);
+                    m_RB = m_OriginalFramePoints.at(1);
+                    m_RC = m_OriginalFramePoints.at(2);
+                    m_RD = m_OriginalFramePoints.at(3);
+
+                    m_SketchLinesOriginal->clear();
+
+                    AddReference();
+                }
+            }
 
             Render();
         }
@@ -484,8 +526,10 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
             }
 
-            m_TempLine.E = ScreenToWorld(m_MousePosition);
-            m_TempMoveLine.E = ScreenToWorld(m_MousePosition);
+            m_TempEndPoint = ScreenToWorld(m_MousePosition);
+
+            m_TempLine.E = m_TempEndPoint;
+            m_TempMoveLine.E = m_TempEndPoint;
 
             if (GetAsyncKeyState(VK_LSHIFT) & 0x8000)
             {
@@ -515,6 +559,11 @@ LRESULT GraphWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
             UpdateSketch();
 
             if (g_LeftClicksIn == 1)
+            {
+                Render();
+            }
+
+            if ((m_TempFramePoints.size() > 0) && (m_TempFramePoints.size() < 4))
             {
                 Render();
             }
@@ -679,6 +728,13 @@ void GraphWindow::DrawContextSpecificStuff()
     {
         
     }
+    else if (g_ActiveTool == ToolBox::Frame)
+    {
+        if ((m_TempFramePoints.size() > 0) && (m_TempFramePoints.size() < 4))
+        {
+            m_Canvas->DrawLine(WorldToScreen(m_TempStartPoint), WorldToScreen(m_TempEndPoint), 0x00FFFFFF);
+        }
+    }
 }
 
 
@@ -812,10 +868,18 @@ vect2_t GraphWindow::ScreenToWorld(const screen_coord_t& point)
 
 void GraphWindow::CreateSketch()
 {
-    m_A = { -250.0f,  250.0f };
-    m_B = {  250.0f,  250.0f };
-    m_C = {  250.0f, -250.0f };
-    m_D = { -250.0f, -250.0f };
+    if (m_Image == nullptr)
+    {
+        return;
+    }
+
+    m_A = { -0.5f * static_cast<float>(m_Image->w),  0.5f * static_cast<float>(m_Image->h) };
+    m_B = {  0.5f * static_cast<float>(m_Image->w),  0.5f * static_cast<float>(m_Image->h) };
+    m_C = {  0.5f * static_cast<float>(m_Image->w), -0.5f * static_cast<float>(m_Image->h) };
+    m_D = { -0.5f * static_cast<float>(m_Image->w), -0.5f * static_cast<float>(m_Image->h) };
+
+    m_FrameLinesOriginal->clear();
+    m_FrameLinesTransformed->clear();
 
     if (m_FrameLinesOriginal)
     {
@@ -829,18 +893,11 @@ void GraphWindow::CreateSketch()
         m_FrameLinesTransformed->push_back({ m_C, m_D, 0x00FF0000 });
         m_FrameLinesTransformed->push_back({ m_D, m_A, 0x00FF0000 });
     }
-
-    AddReference();
 }
 
 
 void GraphWindow::AddReference()
 {
-    m_RA = { -150,  150.0f };
-    m_RB = {  150,  150.0f };
-    m_RC = {  150, -150.0f };
-    m_RD = { -150, -150.0f };
-
     if (m_ReferenceLines)
     {
         m_ReferenceLines->push_back({ m_RA, m_RB, 0x00FF7F00 });
@@ -890,6 +947,7 @@ void GraphWindow::UpdateSketch()
         }
     }
 
+    /*
     m_GridLines->clear();
     m_Points->clear();
 
@@ -914,11 +972,11 @@ void GraphWindow::UpdateSketch()
                 vect2_t U = AddIntersection(d, b);
                 vect2_t V = AddIntersection(a, c);
         
-                DivideQuadrangle(U, V, a.S, b.S, c.S, d.S, 3);
+                DivideQuadrangle(U, V, a.S, b.S, c.S, d.S, 5);
             }
             else
             {
-                DivideRectangle(a.S, b.S, c.S, d.S, 3);
+                DivideRectangle(a.S, b.S, c.S, d.S, 5);
             }
         }
         catch (const std::exception& e)
@@ -931,6 +989,7 @@ void GraphWindow::UpdateSketch()
             );
         }
     }
+    */
 }
 
 
@@ -1024,7 +1083,7 @@ vect2_t GraphWindow::AddHalfwayPoint(const vect2_t& A, const vect2_t& B)
 
 void GraphWindow::UpdateHomography()
 {
-    if (m_ReferenceLines && m_ReferenceLines->size())
+    if (m_ReferenceLines && (m_ReferenceLines->size() == 4))
     {
         try
         {
@@ -1070,10 +1129,17 @@ void GraphWindow::UndoTransformation()
 {
     if (m_ReferenceLines && m_ReferenceLines->size())
     {
+        /*
         m_RA = { -150.0f,  150.0f };
         m_RB = {  150.0f,  150.0f };
         m_RC = {  150.0f, -150.0f };
         m_RD = { -150.0f, -150.0f };
+        */
+
+        m_RA = m_OriginalFramePoints.at(0);
+        m_RB = m_OriginalFramePoints.at(1);
+        m_RC = m_OriginalFramePoints.at(2);
+        m_RD = m_OriginalFramePoints.at(3);
 
         try
         {
@@ -1144,16 +1210,197 @@ void GraphWindow::DrawTexturedTriangle(
                 auto p_world = ScreenToWorld({ x, y });
                 auto p_original = m_InverseHomography * p_world;
 
-                float u = (p_original.x + 250.0f) / 500.0f;
-                float v = (p_original.y + 250.0f) / 500.0f;
+                float u = (p_original.x + 0.5f * static_cast<float>(m_Image->w)) / static_cast<float>(m_Image->w);
+                float v = (p_original.y + 0.5f * static_cast<float>(m_Image->h)) / static_cast<float>(m_Image->h);
 
                 bmp32_t pixel = { 0 };
 
                 pixel.colour = m_Image->GetSample(u, v, 1, 1);
 
                 m_Canvas->PutPixel(x, y, pixel.colour);
-                m_Canvas->PutPixel(x, y, pixel.colour);
 			}
 		}
 	}
+}
+
+
+void GraphWindow::SaveTexturedQuadrangle(const std::string& filename, texture_t& txt)
+{
+    try
+    {
+        auto A = WorldToScreen(m_FrameLinesTransformed->at(0).S);
+        auto B = WorldToScreen(m_FrameLinesTransformed->at(1).S);
+        auto C = WorldToScreen(m_FrameLinesTransformed->at(2).S);
+        auto D = WorldToScreen(m_FrameLinesTransformed->at(3).S);
+    
+        A.u = 0.0f;     A.v = 0.0f;
+        B.u = 1.0f;     B.v = 0.0f;
+        C.u = 1.0f;     C.v = 1.0f;
+        D.u = 0.0f;     D.v = 1.0f;
+    
+        int x_min, y_min, x_max, y_max;
+    
+        x_min = !(B.x < A.x) * A.x + (B.x < A.x) * B.x;
+        x_min = !(C.x < x_min) * x_min + (C.x < x_min) * C.x;
+        x_min = !(D.x < x_min) * x_min + (D.x < x_min) * D.x;
+    
+        y_min = !(B.y < A.y) * A.y + (B.y < A.y) * B.y;
+        y_min = !(C.y < y_min) * y_min + (C.y < y_min) * C.y;
+        y_min = !(D.y < y_min) * y_min + (D.y < y_min) * D.y;
+    
+        x_max = !(B.x > A.x)* A.x + (B.x > A.x)* B.x;
+        x_max = !(C.x > x_max)* x_max + (C.x > x_max)* C.x;
+        x_max = !(D.x > x_max)* x_max + (D.x > x_max)* D.x;
+    
+        y_max = !(B.y > A.y)* A.y + (B.y > A.y)* B.y;
+        y_max = !(C.y > y_max)* y_max + (C.y > y_max)* C.y;
+        y_max = !(D.y > y_max)* y_max + (D.y > y_max)* D.y;
+    
+        txt.w = std::abs(x_max - x_min);
+        txt.h = std::abs(y_max - y_min);
+    
+        if ((txt.w <= 0) || (txt.h <= 0))
+        {
+            return;
+        }
+
+        std::string d = "";
+        d += "A.x: ";
+        d += std::to_string(A.x);
+        d += " - ";
+        d += "A.y: ";
+        d += std::to_string(A.y);
+        d += " - ";
+        d += "B.x: ";
+        d += std::to_string(B.x);
+        d += " - ";
+        d += "B.y: ";
+        d += std::to_string(B.y);
+        d += " - ";
+        d += "C.x: ";
+        d += std::to_string(C.x);
+        d += " - ";
+        d += "C.y: ";
+        d += std::to_string(C.y);
+        d += " - ";
+        d += "D.x: ";
+        d += std::to_string(D.x);
+        d += " - ";
+        d += "D.y: ";
+        d += std::to_string(D.y);
+
+        MessageBox(
+            m_hWnd,
+            d.c_str(),
+            "Corner Points",
+            MB_OK
+        );
+
+        std::string m = "";
+        m += "x_min: ";
+        m += std::to_string(x_min);
+        m += " - ";
+        m += "y_min: ";
+        m += std::to_string(y_min);
+        m += " - ";
+        m += "x_max: ";
+        m += std::to_string(x_max);
+        m += " - ";
+        m += "y_max: ";
+        m += std::to_string(y_max);
+
+        MessageBox(
+            m_hWnd,
+            m.c_str(),
+            "Limits",
+            MB_OK
+        );
+    
+        std::string size_msg = "Image size: " + std::to_string(txt.w) + " * " + std::to_string(txt.h);
+    
+        MessageBox(
+            m_hWnd,
+            size_msg.c_str(),
+            "Saving Image",
+            MB_OK
+        );
+
+        txt.buffer = new uint32_t[txt.w * txt.h];
+
+        if (txt.buffer == nullptr)
+        {
+            return;
+        }
+
+        memset(&txt.buffer[0], 0, txt.w * txt.h * sizeof(uint32_t));
+
+        for (int y = y_min, j = 0; y < y_max; y++, j++)
+        {
+            int tA = (C.x - B.x) * (y - B.y);
+            int tB = (A.x - C.x) * (y - C.y);
+            int tC = (B.x - A.x) * (y - A.y);
+            for (int x = x_min, i = 0; x < x_max; x++, i++)
+            {
+                int wA = tA - (C.y - B.y) * (x - B.x);
+                int wB = tB - (A.y - C.y) * (x - C.x);
+                int wC = tC - (B.y - A.y) * (x - A.x);
+
+                if (wA >= 0 && wB >= 0 && wC >= 0)
+                {
+                    auto p_world = ScreenToWorld({ x, y });
+                    auto p_original = m_InverseHomography * p_world;
+
+                    float u = (p_original.x + 0.5f * static_cast<float>(m_Image->w)) / static_cast<float>(m_Image->w);
+                    float v = (p_original.y + 0.5f * static_cast<float>(m_Image->h)) / static_cast<float>(m_Image->h);
+
+                    txt.buffer[j * txt.w + i] = m_Image->GetSample(u, v, 1, 1);
+                }
+            }
+        }
+
+        for (int y = y_min, j = 0; y < y_max; y++, j++)
+        {
+            int tA = (A.x - D.x) * (y - D.y);
+            int tB = (C.x - A.x) * (y - A.y);
+            int tC = (D.x - C.x) * (y - C.y);
+            for (int x = x_min, i = 0; x < x_max; x++, i++)
+            {
+                int wA = tA - (A.y - D.y) * (x - D.x);
+                int wB = tB - (C.y - A.y) * (x - A.x);
+                int wC = tC - (D.y - C.y) * (x - C.x);
+
+                if (wA >= 0 && wB >= 0 && wC >= 0)
+                {
+                    auto p_world = ScreenToWorld({ x, y });
+                    auto p_original = m_InverseHomography * p_world;
+
+                    float u = (p_original.x + 0.5f * static_cast<float>(m_Image->w)) / static_cast<float>(m_Image->w);
+                    float v = (p_original.y + 0.5f * static_cast<float>(m_Image->h)) / static_cast<float>(m_Image->h);
+
+                    txt.buffer[j * txt.w + i] = m_Image->GetSample(u, v, 1, 1);
+                }
+            }
+        }
+
+        if (!BMPManager::WriteBitMapData(filename, txt))
+        {
+            MessageBox(
+                m_hWnd,
+                "Could not save BMP file.",
+                "Bitmap file error",
+                MB_OK
+            );
+        }
+
+
+    }
+    catch (const std::exception& e)
+    {
+        MessageBox(
+            m_hWnd,
+            e.what(),
+            "SaveTexturedQuadrangle()",
+            MB_OK
+        );
+    }
 }

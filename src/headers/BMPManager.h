@@ -134,6 +134,6 @@ class BMPManager
 public:
 
 	static bool ReadBitMapData(const std::string& filename, texture_t& txt);
-	static bool WriteBitMapData(const std::string& filename, texture_t& txt);
+	static bool WriteBitMapData(const std::string& filename, const texture_t& txt);
 
 };

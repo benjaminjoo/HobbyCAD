@@ -6,7 +6,8 @@ enum class ToolBox
     Selection   = 0,
     Line        = 1,
     Polyline    = 2,
-    Polygon     = 3
+    Polygon     = 3,
+    Frame       = 4
 };
 
 

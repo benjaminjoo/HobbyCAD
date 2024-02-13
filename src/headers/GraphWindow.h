@@ -66,6 +66,8 @@ public:
 
 	void Render();
 
+    void SaveTexturedQuadrangle(const std::string& filename, texture_t& txt);
+
 private:
 
 	static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -183,6 +185,9 @@ private:
 
     vect2_t                         m_TempMoveStartPoint;
     line2_t                         m_TempMoveLine;
+
+    std::vector<vect2_t>            m_TempFramePoints;
+    std::vector<vect2_t>            m_OriginalFramePoints;
 
     std::function<void()>           m_HandleRefreshAll;
 

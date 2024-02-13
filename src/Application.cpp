@@ -10,12 +10,14 @@ Application::Application(HINSTANCE hInstance)
     m_WindowFont(NULL),
     m_hMainWnd(NULL)
 {
+    /*
     memset(&m_Image, 0, sizeof(texture_t));
 
     //if (!BMPManager::ReadBitMapData("vw_1300.bmp", m_Image))
-    if (!BMPManager::ReadBitMapData("lakotelep_2500x2500.bmp", m_Image))
-    //if (!BMPManager::ReadBitMapData("szamuely_2500x2500.bmp", m_Image))
-    if (!BMPManager::ReadBitMapData("chess.bmp", m_Image))
+    //if (!BMPManager::ReadBitMapData("lakotelep_2500x2500.bmp", m_Image))
+    if (!BMPManager::ReadBitMapData("szamuely_2500x2500.bmp", m_Image))
+    //if (!BMPManager::ReadBitMapData("chess.bmp", m_Image))
+    //if (!BMPManager::ReadBitMapData("hms_daedalus.bmp", m_Image))
     {
         MessageBox(
             m_hMainWnd,
@@ -24,6 +26,8 @@ Application::Application(HINSTANCE hInstance)
             MB_OK
         );
     }
+    */
+
     /*
     float* intensity_buffer = nullptr;
     uint8_t* threshold_buffer = nullptr;
@@ -60,6 +64,7 @@ Application::Application(HINSTANCE hInstance)
         );
     }
     */
+
     /*
     if (!Image::FindVerticesInsideCircles(
         m_Image,
@@ -212,15 +217,18 @@ bool Application::Initialise()
             std::bind(&Application::RefreshAll, this)
         );
 
-        window.second->CreateSketch();
+        //window.second->CreateSketch();
 
         count++;
     }
 
-    CreateButton("selection_tool_button",   "Selection",    0,  0, 80, 20, (HMENU)ACTIVATE_SELECTION_TOOL);
-    CreateButton("line_tool_button",        "Line",         0, 20, 80, 20, (HMENU)ACTIVATE_LINE_TOOL);
-    CreateButton("polyline_tool_button",    "Polyline",     0, 40, 80, 20, (HMENU)ACTIVATE_POLYLINE_TOOL);
-    CreateButton("polygon_tool_button",     "Polygon",      0, 60, 80, 20, (HMENU)ACTIVATE_POLYGON_TOOL);
+    CreateButton("selection_tool_button",   "Selection",        0,   0, 80, 20, (HMENU)ACTIVATE_SELECTION_TOOL);
+    CreateButton("line_tool_button",        "Line",             0,  20, 80, 20, (HMENU)ACTIVATE_LINE_TOOL);
+    CreateButton("polyline_tool_button",    "Polyline",         0,  40, 80, 20, (HMENU)ACTIVATE_POLYLINE_TOOL);
+    CreateButton("polygon_tool_button",     "Polygon",          0,  60, 80, 20, (HMENU)ACTIVATE_POLYGON_TOOL);
+    CreateButton("frame_tool_button",       "Ref. Frame",       0,  80, 80, 20, (HMENU)ACTIVATE_FRAME_TOOL);
+    CreateButton("open_image_button",       "Open Image",       0, 100, 80, 20, (HMENU)OPEN_IMAGE_FILE);
+    CreateButton("save_image_button",       "Save Image",       0, 120, 80, 20, (HMENU)SAVE_IMAGE_FILE);
 
     ShowWindow(m_hMainWnd, SW_MAXIMIZE);
 
@@ -335,6 +343,134 @@ LRESULT CALLBACK Application::HandleMainWindowMessage(HWND hwnd, UINT uMsg, WPAR
                 {
                     g_LeftClicksIn = 0;
                     g_ActiveTool = ToolBox::Polygon;
+                }
+                break;
+                case ACTIVATE_FRAME_TOOL:
+                {
+                    g_LeftClicksIn = 0;
+                    g_ActiveTool = ToolBox::Frame;
+                }
+                break;
+                case OPEN_IMAGE_FILE:
+                {
+                    OPENFILENAME ofn;
+                    CHAR filename[260] = { 0 };
+
+                    ZeroMemory(&ofn, sizeof(ofn));
+
+                    ofn.lStructSize         = sizeof(ofn);
+                    ofn.hwndOwner           = NULL;
+                    ofn.lpstrFile           = filename;
+                    ofn.nMaxFile            = sizeof(filename);
+                    ofn.lpstrFilter         = "Bitmap Files (*.BMP)\0*.bmp\0";
+                    ofn.nFilterIndex        = 1;
+                    ofn.lpstrFileTitle      = NULL;
+                    ofn.nMaxFileTitle       = 0;
+                    ofn.lpstrInitialDir     = NULL;
+                    ofn.Flags               = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+                    if (GetOpenFileNameA(&ofn))
+                    {
+                        memset(&m_Image, 0, sizeof(texture_t));
+
+                        if (!BMPManager::ReadBitMapData(filename, m_Image))
+                        {
+                            MessageBox(
+                                m_hMainWnd,
+                                "Could not open BMP file.",
+                                "Bitmap file error",
+                                MB_OK
+                            );
+                        }
+                        else
+                        {
+                            for (auto& window : m_GraphWindows)
+                            {
+                                window.second->CreateSketch();
+                            }
+                        }
+
+                        RefreshAll();
+                    }
+                }
+                break;
+                case SAVE_IMAGE_FILE:
+                {
+                    OPENFILENAMEA ofn;
+                    CHAR output_filename[260] = { 0 };
+                    CHAR szTitle[] = "Save Image As";
+
+                    ZeroMemory(&ofn, sizeof(ofn));
+
+                    ofn.lStructSize     = sizeof(ofn);
+                    ofn.lpstrFile       = output_filename;
+                    ofn.nMaxFile        = sizeof(output_filename);
+                    ofn.lpstrFilter     = "BMP Files\0*.bmp\0All Files\0*.*\0";
+                    ofn.nFilterIndex    = 1;
+                    ofn.lpstrDefExt     = "bmp";
+                    ofn.lpstrTitle      = szTitle;
+                    ofn.Flags           = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+                    if (GetSaveFileNameA(&ofn) == TRUE)
+                    {
+                        MessageBox(
+                            m_hMainWnd,
+                            output_filename,
+                            "Save As",
+                            MB_OK
+                        );
+
+                        try
+                        {
+                            texture_t output_image = { 0 };
+
+                            for (auto& window : m_GraphWindows)
+                            {
+                                window.second->SaveTexturedQuadrangle(output_filename, output_image);
+                                break;
+                            }
+
+                            /*
+                            texture_t t;
+                            t.w = 3200;
+                            t.h = 1600;
+                            t.buffer = new uint32_t[t.w * t.h];
+                            for (int i = 0; i < t.w * t.h; i++)
+                            {
+                                t.buffer[i] = 0x007F7FFF;
+                            }
+                            if (!BMPManager::WriteBitMapData(output_filename, t))
+                            {
+                                MessageBox(
+                                    m_hMainWnd,
+                                    "Could not save BMP file.",
+                                    "Bitmap file error",
+                                    MB_OK
+                                );
+                            }
+                            */
+                            /*
+                            if (!BMPManager::WriteBitMapData(output_filename, output_image))
+                            {
+                                MessageBox(
+                                    m_hMainWnd,
+                                    "Could not save BMP file.",
+                                    "Bitmap file error",
+                                    MB_OK
+                                );
+                            }
+                            */
+                        }
+                        catch (const std::exception& e)
+                        {
+                            MessageBox(
+                                m_hMainWnd,
+                                e.what(),
+                                "Save As",
+                                MB_OK
+                            );
+                        }
+                    }
                 }
                 break;
             }

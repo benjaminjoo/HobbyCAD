@@ -30,6 +30,9 @@ inline bool GetIntensityAndThresholdBuffer(
         return false;
     }
 
+    //float image_w = static_cast<float>(txt.w);
+    //float image_h = static_cast<float>(txt.h);
+
     int image_sz = txt.w * txt.h;
 
     i_buffer = new float[image_sz];
@@ -126,6 +129,9 @@ inline bool FindVertices(
         return false;
     }
 
+    float image_w = static_cast<float>(txt.w);
+    float image_h = static_cast<float>(txt.h);
+
     if ((i_buffer == nullptr) || (t_buffer == nullptr))
     {
         return false;
@@ -168,8 +174,10 @@ inline bool FindVertices(
                 std::abs(num_less - num_more) == 1
             )
             {
-                float x = -250.0f + static_cast<float>(i) / static_cast<float>(txt.w) * 500.0f;
-                float y = -250.0f + static_cast<float>(j) / static_cast<float>(txt.h) * 500.0f;
+                //float x = -250.0f + static_cast<float>(i) / static_cast<float>(txt.w) * 500.0f;
+                //float y = -250.0f + static_cast<float>(j) / static_cast<float>(txt.h) * 500.0f;
+                float x = -0.5f * image_w + static_cast<float>(i) / static_cast<float>(txt.w) * image_w;
+                float y = -0.5f * image_h + static_cast<float>(j) / static_cast<float>(txt.h) * image_h;
 
                 vertices.push_back({ x, y });
             }
@@ -191,6 +199,9 @@ inline bool FindVerticesInsideSquares(
     {
         return false;
     }
+
+    float image_w = static_cast<float>(txt.w);
+    float image_h = static_cast<float>(txt.h);
 
     if ((i_buffer == nullptr) || (t_buffer == nullptr))
     {
@@ -224,8 +235,10 @@ inline bool FindVerticesInsideSquares(
             }
             if ((t_max - t_min) > 24)
             {
-                float x = -250.0f + static_cast<float>(i) / static_cast<float>(txt.w) * 500.0f;
-                float y = -250.0f + static_cast<float>(j) / static_cast<float>(txt.h) * 500.0f;
+                //float x = -250.0f + static_cast<float>(i) / static_cast<float>(txt.w) * 500.0f;
+                //float y = -250.0f + static_cast<float>(j) / static_cast<float>(txt.h) * 500.0f;
+                float x = -0.5f * image_w + static_cast<float>(i) / static_cast<float>(txt.w) * image_w;
+                float y = -0.5f * image_h + static_cast<float>(j) / static_cast<float>(txt.h) * image_h;
 
                 vertices.push_back({ x, y });
             }

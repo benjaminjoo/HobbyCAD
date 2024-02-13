@@ -69,19 +69,25 @@ bool BMPManager::ReadBitMapData(const std::string& filename, texture_t& txt)
 }
 
 
-bool BMPManager::WriteBitMapData(const std::string& filename, texture_t& txt)
+bool BMPManager::WriteBitMapData(const std::string& filename, const texture_t& txt)
 {
 	std::ofstream picture(filename, std::ifstream::out | std::ifstream::binary);
 
 	if (picture.is_open())
 	{
-		DWORD rowSize = ((24 * txt.w) / 32) * 4;
+        
+        DWORD row_size = (txt.w * 3) / 4 * 4;
+        if (row_size < (txt.w * 3))
+        {
+            row_size += 4;
+        }
+        
 
 		_WinBMPFileHeader header_1;
 		memset(&header_1, 0, sizeof(_WinBMPFileHeader));
 
 		header_1.FileType = 0x4D42;
-		header_1.FileSize = sizeof(_WinBMPFileHeader) + sizeof(_Win4xBitmapHeader) + txt.w * txt.h * 3;
+		header_1.FileSize = sizeof(_WinBMPFileHeader) + sizeof(_Win4xBitmapHeader) + txt.h * row_size;
 		header_1.BitmapOffset = 0x36;
 
 		picture.write((const char*)(&header_1), sizeof(_WinBMPFileHeader));
@@ -94,18 +100,28 @@ bool BMPManager::WriteBitMapData(const std::string& filename, texture_t& txt)
 		header_2.Height = txt.h;
 		header_2.Planes = 1;
 		header_2.BitsPerPixel = 24;
-		header_2.SizeOfBitmap = txt.w * txt.h * 3;
+		header_2.SizeOfBitmap = txt.h * row_size;
+        header_2.HorzResolution = 4724;
+        header_2.VertResolution = 4724;
 
 		picture.write((const char*)(&header_2), sizeof(_Win4xBitmapHeader));
 
-		for (int j = txt.h - 1; j >= 0; j--)
-		{
-			for (int i = 0; i < txt.w; i++)
-			{
-				uint32_t pixel = txt.buffer[j * txt.w + i];
-				picture.write((const char*)(&pixel), 3);
-			}
-		}
+        for (int j = 0; j < txt.h; j++)
+        {
+            int bytes_written = 0;
+            for (int i = 0; i < txt.w; i++)
+            {
+                uint32_t pixel = txt.buffer[j * txt.w + i];
+                picture.write((const char*)(&pixel), 3);
+                bytes_written += 3;
+            }
+            int padding = row_size - bytes_written;
+            for (int p = 0; p < padding; p++)
+            {
+                char xxx = 0;
+                picture.write((const char*)(&xxx), 1);
+            }
+        }
 
 		picture.close();
 
@@ -113,8 +129,6 @@ bool BMPManager::WriteBitMapData(const std::string& filename, texture_t& txt)
 	}
 	else
 	{
-		std::string error_msg = "Failed to write file: " + filename + "\n";
-		OutputDebugStringA(error_msg.c_str());
 		return false;
 	}
 	return false;

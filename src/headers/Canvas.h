@@ -1,9 +1,11 @@
 #pragma once
 
 
-#include <Windows.h>
 #include <cstdint>
 #include <cmath>
+
+
+#include <Windows.h>
 
 
 #include "BMPManager.h"
